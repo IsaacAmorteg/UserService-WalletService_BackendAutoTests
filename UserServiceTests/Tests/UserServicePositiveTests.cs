@@ -92,19 +92,43 @@ namespace UserServicePositiveTests
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
         }
         [Test]
-        public async Task T7()
+        public async Task T7_UserService_RegisterUser_SpecialCharacters_StatusCodeIs200()
         {
-            Assert.Fail();
+            HttpRequestMessage request = CreateRegisterRequestHelper.CreateRegisterUserRequest("Boeing-787!@", "Avianc@_1#$%");
+
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         [Test]
-        public async Task T8()
+        public async Task T8_UserService_RegisterUser_AfterUserIsDeletedAndNewUserRegistered_NewUserIdIsIncrementedByOne()
         {
-            Assert.Fail();
+            HttpRequestMessage request1 = CreateRegisterRequestHelper.CreateRegisterUserRequest("Willy", "Castro");
+            HttpResponseMessage response1 = await client.SendAsync(request1);
+            string createContent = await response1.Content.ReadAsStringAsync();
+            int initialUserId = JsonConvert.DeserializeObject<int>(createContent);
+
+            string deleteUserUrl = $"https://userservice-uat.azurewebsites.net/Register/DeleteUser?userId={initialUserId}";
+            HttpResponseMessage deleteResponse = await client.DeleteAsync(deleteUserUrl);
+
+            int newUserId = initialUserId + 1;
+            HttpRequestMessage request2 = CreateRegisterRequestHelper.CreateRegisterUserRequest("Dean", "Smith");
+            HttpResponseMessage response2 = await client.SendAsync(request2);
+            string newCreateContent = await response2.Content.ReadAsStringAsync();
+            int newUserCreatedId = JsonConvert.DeserializeObject<int>(newCreateContent);
+
+            Assert.That(newUserCreatedId, Is.EqualTo(newUserId));
+
+            
         }
         [Test]
-        public async Task T9()
+        public async Task T9_UserService_RegisterUser_FieldAreDigits_StatusCodeIs200()
         {
-            Assert.Fail();
+            HttpRequestMessage request = CreateRegisterRequestHelper.CreateRegisterUserRequest("55637346", "242345");
+
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
     }
 }
