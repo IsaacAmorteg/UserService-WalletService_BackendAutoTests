@@ -130,5 +130,21 @@ namespace UserServicePositiveTests
 
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
+        [Test]
+        public async Task T10_UserService_GetUserStatus_UserExists_ReturnsFalseDefault()
+        {
+            HttpRequestMessage createRequest = CreateRegisterRequestHelper.CreateRegisterUserRequest("Robin", "Hood");
+            HttpResponseMessage createResponse = await client.SendAsync(createRequest);
+
+            string createContent = await createResponse.Content.ReadAsStringAsync();
+            int userId = JsonConvert.DeserializeObject<int>(createContent);
+
+            string getUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId={userId}";
+            HttpResponseMessage statusResponse = await client.GetAsync(getUserStatusUri);
+            bool userStatus = JsonConvert.DeserializeObject<bool>(await statusResponse.Content.ReadAsStringAsync());
+
+            Assert.IsFalse(userStatus);
+
+        }
     }
 }
