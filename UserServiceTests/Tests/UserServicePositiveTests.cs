@@ -3,6 +3,7 @@ using NUnit.Framework;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using UserServiceTests.Helpers;
 
 namespace UserServicePositiveTests
 {
@@ -19,7 +20,7 @@ namespace UserServicePositiveTests
         [Test]
         public async Task T1_UserService_RegisterUser_WithEmptyFields_StatusCodeIs200()
         {
-            HttpRequestMessage request = CreateRegisterUserRequest("", "");
+            HttpRequestMessage request = CreateRegisterRequestHelper.CreateRegisterUserRequest("", "");
             
             HttpResponseMessage response = await client.SendAsync(request);
 
@@ -28,7 +29,7 @@ namespace UserServicePositiveTests
         [Test]
         public async Task T2_UserService_RegisterUser_WithEmptyFields_ResponseIsIdGreaterThan0()
         {
-            HttpRequestMessage request = CreateRegisterUserRequest("", "");
+            HttpRequestMessage request = CreateRegisterRequestHelper.CreateRegisterUserRequest("", "");
 
             HttpResponseMessage response = await client.SendAsync(request);
             var content = await response.Content.ReadAsStringAsync();
@@ -36,27 +37,6 @@ namespace UserServicePositiveTests
 
             Assert.That(newUserId, Is.GreaterThan(0));
         }
-        private HttpRequestMessage CreateRegisterUserRequest(string firstName, string lastName)
-        {
-            UserServiceRegisterNewUserRequest requestBody = new UserServiceRegisterNewUserRequest()
-            {
-                firstName = firstName,
-                lastName = lastName
-            };
-            HttpRequestMessage request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Post,
-                RequestUri = new System.Uri("https://userservice-uat.azurewebsites.net/Register/RegisterNewUser"),
-                Content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json")
-            };
-            return request;
-
-        }
-    }
-   
-    public class UserServiceRegisterNewUserRequest
-    {
-        public string? firstName;
-        public string? lastName;
+        
     }
 }
