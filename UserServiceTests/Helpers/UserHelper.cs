@@ -23,6 +23,12 @@ namespace UserServiceTests.Helpers
             HttpResponseMessage getStatusResponse = await client.GetAsync(getUserStatusUri);
             return JsonConvert.DeserializeObject<bool>(await getStatusResponse.Content.ReadAsStringAsync());
         }
+        public static async Task<bool> SetUserStatus(int userId, bool newStatus)
+        {
+            string setStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId={userId}&newStatus={newStatus}";
+            HttpResponseMessage response = await client.PutAsync(setStatusUri, null);
+            return response.IsSuccessStatusCode;
+        }
 
         public static async Task<bool> DeleteUserAsync(int userId)
         {
