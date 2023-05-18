@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using NUnit.Framework;
+using System.Diagnostics.SymbolStore;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -130,5 +131,222 @@ namespace UserServicePositiveTests
 
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
+        [Test]
+        public async Task T10_UserService_GetUserStatus_UserExists_ReturnsFalseDefault()
+        {
+            HttpRequestMessage createRequest = CreateRegisterRequestHelper.CreateRegisterUserRequest("Robin", "Hood");
+            HttpResponseMessage createResponse = await client.SendAsync(createRequest);
+
+            string createContent = await createResponse.Content.ReadAsStringAsync();
+            int userId = JsonConvert.DeserializeObject<int>(createContent);
+
+            string getUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId={userId}";
+            HttpResponseMessage statusResponse = await client.GetAsync(getUserStatusUri);
+            bool userStatus = JsonConvert.DeserializeObject<bool>(await statusResponse.Content.ReadAsStringAsync());
+
+            Assert.IsFalse(userStatus);
+        }
+        [Test]
+        public async Task T11_UserService_GetUserStatus_UserDoesNotExist_Returns500()
+        {
+            string getUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId=0";
+            HttpResponseMessage statusResponse = await client.GetAsync(getUserStatusUri);
+            
+            Assert.That(statusResponse.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        }
+        [Test]
+        public async Task T12_UserService_GetUserStatus_StatusChangedToTrue_StatusCodeIs200AndNewStatusTrue()
+        {
+            HttpRequestMessage createRequest = CreateRegisterRequestHelper.CreateRegisterUserRequest("Egan", "Bernal");
+            HttpResponseMessage createResponse = await client.SendAsync(createRequest);
+            var content = await createResponse.Content.ReadAsStringAsync();
+            int userId = JsonConvert.DeserializeObject<int>(content);
+
+            string getUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId={userId}";
+            HttpResponseMessage statusResponse = await client.GetAsync(getUserStatusUri);
+            bool userStatus = JsonConvert.DeserializeObject<bool>(await statusResponse.Content.ReadAsStringAsync());
+
+            Assert.That(userStatus, Is.False);
+
+            string setUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId={userId}&newStatus=true";
+            HttpResponseMessage setUserStatusResponse = await client.PutAsync(setUserStatusUri, null);
+
+            string getUserStatusUri2 = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId={userId}";
+            HttpResponseMessage statusResponse2 = await client.GetAsync(getUserStatusUri2);
+            bool newUserStatus = JsonConvert.DeserializeObject<bool>(await statusResponse2.Content.ReadAsStringAsync());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(newUserStatus, Is.True);
+                Assert.That(statusResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(statusResponse2.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            });
+            
+        }
+        [Test]
+        public async Task T13_UserService_GetUserStatus_StatusChangedToFalse_StatusCodeIs200AndNewStatusFalse ()
+        {
+            HttpRequestMessage createRequest = CreateRegisterRequestHelper.CreateRegisterUserRequest("Miguel", "Lopez");
+            HttpResponseMessage createResponse = await client.SendAsync(createRequest);
+            var content = await createResponse.Content.ReadAsStringAsync();
+            int userId = JsonConvert.DeserializeObject<int>(content);
+
+            string setUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId={userId}&newStatus=true";
+            HttpResponseMessage setUserStatusResponse = await client.PutAsync(setUserStatusUri, null);
+
+            string getUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId={userId}";
+            HttpResponseMessage statusResponse = await client.GetAsync(getUserStatusUri);
+            bool userStatus = JsonConvert.DeserializeObject<bool>(await statusResponse.Content.ReadAsStringAsync());
+
+            Assert.That(userStatus, Is.True);
+
+            string setUserStatusUriFalse = $"https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId={userId}&newStatus=false";
+            HttpResponseMessage setUserStatusResponseFalse = await client.PutAsync(setUserStatusUriFalse, null);
+
+            string getUserStatusUri2 = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId={userId}";
+            HttpResponseMessage statusResponse2 = await client.GetAsync(getUserStatusUri2);
+            bool newUserStatus = JsonConvert.DeserializeObject<bool>(await statusResponse2.Content.ReadAsStringAsync());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(newUserStatus, Is.False);
+                Assert.That(statusResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.That(statusResponse2.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            });
+
+        }
+        [Test]
+        public async Task T14_UserService_GetUserStatus_DeletedUserStatus_Returns500()
+        {
+            HttpRequestMessage request = CreateRegisterRequestHelper.CreateRegisterUserRequest("Sergui", "Higuita");
+            HttpResponseMessage response = await client.SendAsync(request);
+            string createContent = await response.Content.ReadAsStringAsync();
+            int userId = JsonConvert.DeserializeObject<int>(createContent);
+
+            string deleteUserUrl = $"https://userservice-uat.azurewebsites.net/Register/DeleteUser?userId={userId}";
+            await client.DeleteAsync(deleteUserUrl);
+
+            string getUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId={userId}";
+            HttpResponseMessage statusResponse = await client.GetAsync(getUserStatusUri);
+
+            Assert.That(statusResponse.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        }
+        [Test]
+        public async Task T15_UserService_SetStatus_NotExistingUserStatusChange_Status500()
+        {
+            string setStatusUri = "https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId=0&newStatus=true";
+            HttpResponseMessage setStatusResponse = await client.PutAsync(setStatusUri, null);
+            
+            Assert.That(setStatusResponse.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        }
+        [Test]
+        public async Task T16_UserService_SetStatus_ChangeFromDefaultToTrue_StatusCodeIs200AndFinalStatusTrue()
+        {
+            HttpRequestMessage request = CreateRegisterRequestHelper.CreateRegisterUserRequest("Dross", "Rotzank");
+            HttpResponseMessage response = await client.SendAsync(request);
+            string createContent = await response.Content.ReadAsStringAsync();
+            int userId = JsonConvert.DeserializeObject<int>(createContent);
+
+            string getUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId={userId}";
+            HttpResponseMessage getStatusResponse = await client.GetAsync(getUserStatusUri);
+            bool initialStatus = JsonConvert.DeserializeObject<bool>(await getStatusResponse.Content.ReadAsStringAsync());
+
+            Assert.IsFalse(initialStatus);
+
+            string setStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId={userId}&newStatus=true";
+            HttpResponseMessage setStatusResponse = await client.PutAsync(setStatusUri, null);
+            setStatusResponse.EnsureSuccessStatusCode();
+
+            getStatusResponse = await client.GetAsync(getUserStatusUri);
+            bool finalStatus = JsonConvert.DeserializeObject<bool>(await getStatusResponse.Content.ReadAsStringAsync());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(setStatusResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.IsTrue(finalStatus);
+            });
+        }
+        [Test]
+        public async Task T17_UserService_SetStatus_MultipleStatusChanges_StatusCodeIs200AndFinalStatusFalse()
+        {
+            HttpRequestMessage request = CreateRegisterRequestHelper.CreateRegisterUserRequest("Santi", "Buitrago");
+            HttpResponseMessage response = await client.SendAsync(request);
+            string createContent = await response.Content.ReadAsStringAsync();
+            int userId = JsonConvert.DeserializeObject<int>(createContent);
+
+            string getUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId={userId}";
+            HttpResponseMessage getStatusResponse = await client.GetAsync(getUserStatusUri);
+            bool initialStatus = JsonConvert.DeserializeObject<bool>(await getStatusResponse.Content.ReadAsStringAsync());
+
+            Assert.IsFalse(initialStatus);
+
+            string setStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId={userId}&newStatus=true";
+            HttpResponseMessage setStatusResponse = await client.PutAsync(setStatusUri, null);
+            setStatusResponse.EnsureSuccessStatusCode();
+
+            getStatusResponse = await client.GetAsync(getUserStatusUri);
+            bool statusAfterTrue = JsonConvert.DeserializeObject<bool>(await getStatusResponse.Content.ReadAsStringAsync());
+
+            Assert.IsTrue(statusAfterTrue);
+
+            setStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId={userId}&newStatus=false";
+            setStatusResponse = await client.PutAsync(setStatusUri, null);
+            setStatusResponse.EnsureSuccessStatusCode();
+
+            getStatusResponse = await client.GetAsync(getUserStatusUri);
+            bool finalStatus = JsonConvert.DeserializeObject<bool>(await getStatusResponse.Content.ReadAsStringAsync());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(setStatusResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.IsFalse(finalStatus);
+            });
+        }
+        [Test]
+        public async Task T18_UserService_SetStatus_MultipleStatusChanges_StatusCodeIs200AndFinalStatusTrue()
+        {
+            HttpRequestMessage request = CreateRegisterRequestHelper.CreateRegisterUserRequest("Santi", "Buitrago");
+            HttpResponseMessage response = await client.SendAsync(request);
+            string createContent = await response.Content.ReadAsStringAsync();
+            int userId = JsonConvert.DeserializeObject<int>(createContent);
+
+            string getUserStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/GetUserStatus?userId={userId}";
+            HttpResponseMessage getStatusResponse = await client.GetAsync(getUserStatusUri);
+            bool initialStatus = JsonConvert.DeserializeObject<bool>(await getStatusResponse.Content.ReadAsStringAsync());
+
+            Assert.IsFalse(initialStatus);
+
+            string setStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId={userId}&newStatus=true";
+            HttpResponseMessage setStatusResponse = await client.PutAsync(setStatusUri, null);
+            setStatusResponse.EnsureSuccessStatusCode();
+
+            getStatusResponse = await client.GetAsync(getUserStatusUri);
+            bool statusAfterTrue = JsonConvert.DeserializeObject<bool>(await getStatusResponse.Content.ReadAsStringAsync());
+
+            Assert.IsTrue(statusAfterTrue);
+
+            setStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId={userId}&newStatus=false";
+            setStatusResponse = await client.PutAsync(setStatusUri, null);
+            setStatusResponse.EnsureSuccessStatusCode();
+
+            getStatusResponse = await client.GetAsync(getUserStatusUri);
+            bool statusAfterFalse = JsonConvert.DeserializeObject<bool>(await getStatusResponse.Content.ReadAsStringAsync());
+
+            Assert.IsFalse(statusAfterFalse);
+
+            setStatusUri = $"https://userservice-uat.azurewebsites.net/UserManagement/SetUserStatus?userId={userId}&newStatus=true";
+            setStatusResponse = await client.PutAsync(setStatusUri, null);
+            setStatusResponse.EnsureSuccessStatusCode();
+
+            getStatusResponse = await client.GetAsync(getUserStatusUri);
+            bool finalStatus = JsonConvert.DeserializeObject<bool>(await getStatusResponse.Content.ReadAsStringAsync());
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(setStatusResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                Assert.IsTrue(finalStatus);
+            }); 
+        }
+
     }
 }
