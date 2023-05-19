@@ -424,6 +424,5 @@ namespace UserServicePositiveTests
             Assert.That(responseBody, Is.EqualTo("Sequence contains no elements"));
 
         }
-
     }
 }
