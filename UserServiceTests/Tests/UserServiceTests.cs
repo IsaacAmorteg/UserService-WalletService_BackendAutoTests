@@ -3,10 +3,10 @@ using NUnit.Framework;
 using System.Net;
 using UserServiceTests.Helpers;
 
-namespace UserServicePositiveTests
+namespace UserServiceTests
 {
     [TestFixture]
-    public class UserServicePositiveTests
+    public class UserServiceTests
     {
         private HttpClient client;
         private int userId;
