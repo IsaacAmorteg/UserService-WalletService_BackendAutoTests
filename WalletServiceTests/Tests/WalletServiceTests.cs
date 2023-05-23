@@ -1,6 +1,8 @@
+using NUnit.Framework;
+
 namespace WalletServiceTests
 {
-    public class Tests
+    public class WalletServiceTests
     {
         [SetUp]
         public void Setup()
