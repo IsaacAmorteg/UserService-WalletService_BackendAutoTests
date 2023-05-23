@@ -3,7 +3,7 @@
     public class WalletServiceChargeRequest
     {
         public int? userId;
-        public int? amount;
+        public decimal? amount;
 
     }
 }
