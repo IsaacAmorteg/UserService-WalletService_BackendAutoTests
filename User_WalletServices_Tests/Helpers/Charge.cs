@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using UserServiceTests.Models;
@@ -10,7 +10,7 @@ namespace UserServiceTests.Helpers
 {
     public static class ChargeRequest
     {
-        public static async Task<Guid> Charge(int userId, decimal amount)
+        public static async Task<object> Charge(int userId, decimal amount)
         {
             WalletServiceChargeRequest requestBody = new WalletServiceChargeRequest()
             {
@@ -31,12 +31,22 @@ namespace UserServiceTests.Helpers
                 };
 
                 HttpResponseMessage response = await client.SendAsync(request);
-                response.EnsureSuccessStatusCode();
 
-                string responseContent = await response.Content.ReadAsStringAsync();
-                Guid transactionId = JsonConvert.DeserializeObject<Guid>(responseContent);
-
-                return transactionId;
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    string responseContent = await response.Content.ReadAsStringAsync();
+                    Guid transactionId = JsonConvert.DeserializeObject<Guid>(responseContent);
+                    return transactionId;
+                }
+                else if (response.StatusCode == HttpStatusCode.InternalServerError)
+                {
+                    string responseContent = await response.Content.ReadAsStringAsync();
+                    return responseContent;
+                }
+                else
+                {
+                    throw new Exception($"Unexpected status code received: {response.StatusCode}");
+                }
             }
         }
     }

@@ -107,7 +107,7 @@ namespace UserServiceTests
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         }
         [Test]
-        public async Task T8_UserService_RegisterUser_AfterUserIsDeletedAndNewUserRegistered_NewUserIdIsIncrementedByOne()
+        public async Task T8_UserService_RegisterUser_AfterUserIsDeletedAndNewUserRegistered_NewUserIdIsIncrementedByOne() 
         {
             HttpRequestMessage request1 = CreateRegisterRequestHelper.CreateRegisterUserRequest("Willy", "Castro");
             HttpResponseMessage response1 = await client.SendAsync(request1);
@@ -122,6 +122,7 @@ namespace UserServiceTests
             HttpResponseMessage response2 = await client.SendAsync(request2);
             string newCreateContent = await response2.Content.ReadAsStringAsync();
             int newUserCreatedId = JsonConvert.DeserializeObject<int>(newCreateContent);
+            Assert.That(response2.StatusCode, Is.EqualTo(HttpStatusCode.OK));
 
             Assert.That(newUserCreatedId, Is.EqualTo(newUserId));
 
