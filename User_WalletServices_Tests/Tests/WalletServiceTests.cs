@@ -25,7 +25,7 @@ namespace WalletServiceTests
         }
 
         [Test]
-        public async Task T1_WalletService_GetBalance_NewUser_ReturnsNotActiveUser500()
+        public async Task T1_WalletService_GetBalance_NewUser_ReturnsNotActiveUser500() //Negative Path
         {            
             HttpResponseMessage response = await client.GetAsync($"https://walletservice-uat.azurewebsites.net/Balance/GetBalance?userId={userId}");
             string responseBody = await response.Content.ReadAsStringAsync();
@@ -34,7 +34,7 @@ namespace WalletServiceTests
             Assert.That(responseBody, Is.EqualTo("not active user"));
         }
         [Test]
-        public async Task T2_WalletService_GetBalance_NonExistingUser_ReturnsNotActiveUser500()
+        public async Task T2_WalletService_GetBalance_NonExistingUser_ReturnsNotActiveUser500() //Negative Path
         {
             int nonExistingUserId = 0;
             HttpResponseMessage response = await WalletHelper.GetBalance(nonExistingUserId);
@@ -54,10 +54,27 @@ namespace WalletServiceTests
             Assert.That(responseBody, Is.EqualTo("0"));
         }
         [Test]
-        [TestCase(30, "30.0")]
-        [TestCase(20.1, "20.1")]
-        [TestCase(1000.01, "1000.01")]
+        [TestCase(10, "10.0")]
+        [TestCase(0.01, "0.01")]
+        [TestCase(9999999.99, "9999999.99")]
+        [TestCase(10000000, "10000000.0")]        
         public async Task T4_WalletService_GetBalance_IsCharged_ReturnsCorrectBalances(decimal amountCharged, string expectedBalance)
+        {
+            await UserHelper.SetUserStatus(userId, true);
+            await ChargeRequest.Charge(userId, amountCharged);
+
+            HttpResponseMessage response = await WalletHelper.GetBalance(userId);
+            string responseBody = await response.Content.ReadAsStringAsync();
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseBody, Is.EqualTo(expectedBalance));
+        }
+        [Test]
+        [TestCase(-10, "0")]
+        [TestCase(-0.01, "0")]
+        [TestCase(-9999999.99, "0")]
+        [TestCase(-10000000.01, "0")]
+        public async Task T4_4_WalletService_GetBalance_IsChargedNonSufficientFunds_ReturnsBalanceZero(decimal amountCharged, string expectedBalance) 
         {
             await UserHelper.SetUserStatus(userId, true);
             await ChargeRequest.Charge(userId, amountCharged);
@@ -88,7 +105,7 @@ namespace WalletServiceTests
             Assert.That(responseBody, Is.EqualTo(expectedBalance));
         }
         [Test]
-        public async Task T6_WalletService_GetBalance_MultipleTransactionsCharged_ReturnsBalanceZero()
+        public async Task T6_WalletService_GetBalance_MultipleTransactionsCharged_ReturnsBalanceZero() 
         {
             await UserHelper.SetUserStatus(userId, true);
             decimal[] amountsCharged = { 10, 20.5m, 30, -10, -20, -30, -0.5m };
