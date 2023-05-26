@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using NUnit.Framework;
+using System.Globalization;
 using System.Net;
 using UserServiceTests.Helpers;
 
@@ -58,7 +59,7 @@ namespace WalletServiceTests
         [TestCase(0.01, "0.01")]
         [TestCase(9999999.99, "9999999.99")]
         [TestCase(10000000, "10000000.0")]        
-        public async Task T4_WalletService_GetBalance_IsCharged_ReturnsCorrectBalances(decimal amountCharged, string expectedBalance)
+        public async Task T4_WalletService_GetBalance_IsCharged_ReturnsCorrectBalances(double amountCharged, string expectedBalance)
         {
             await UserHelper.SetUserStatus(userId, true);
             await ChargeRequest.Charge(userId, amountCharged);
@@ -74,10 +75,11 @@ namespace WalletServiceTests
         [TestCase(-0.01, "0")]
         [TestCase(-9999999.99, "0")]
         [TestCase(-10000000.01, "0")]
-        public async Task T4_4_WalletService_GetBalance_IsChargedNonSufficientFunds_ReturnsBalanceZero(decimal amountCharged, string expectedBalance) 
+        public async Task T4_4_WalletService_GetBalance_IsChargedNonSufficientFunds_ReturnsBalanceZero(double amountCharged, string expectedBalance) 
         {
             await UserHelper.SetUserStatus(userId, true);
-            await ChargeRequest.Charge(userId, amountCharged);
+            ChargeResult result = await ChargeRequest.Charge(userId, amountCharged);
+            Assert.That(result.Response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
 
             HttpResponseMessage response = await WalletHelper.GetBalance(userId);
             string responseBody = await response.Content.ReadAsStringAsync();
@@ -90,9 +92,9 @@ namespace WalletServiceTests
         public async Task T5_WalletService_GetBalance_MultipleTransactionsCharged_ReturnsCorrectBalance()
         {
             await UserHelper.SetUserStatus(userId, true);
-            decimal[] amountsCharged = { 10, 20.5m, 30, -15m };
+            double[] amountsCharged = { 10, 20.5, 30, -15 };
 
-            foreach (decimal amount in amountsCharged)
+            foreach (double amount in amountsCharged)
             {
                 await ChargeRequest.Charge(userId, amount);
             }
@@ -108,9 +110,9 @@ namespace WalletServiceTests
         public async Task T6_WalletService_GetBalance_MultipleTransactionsCharged_ReturnsBalanceZero() 
         {
             await UserHelper.SetUserStatus(userId, true);
-            decimal[] amountsCharged = { 10, 20.5m, 30, -10, -20, -30, -0.5m };
+            double[] amountsCharged = { 10, 20.5, 30, -10, -20, -30, -0.5 };
 
-            foreach (decimal amount in amountsCharged)
+            foreach (double amount in amountsCharged)
             {
                 await ChargeRequest.Charge(userId, amount);
             }
@@ -126,9 +128,9 @@ namespace WalletServiceTests
         public async Task T7_WalletService_GetBalance_MultipleTransactionsCharged_ReturnsBalanceZeroDecimalOne()
         {
             await UserHelper.SetUserStatus(userId, true);
-            decimal[] amountsCharged = { 10, 20.5m, 30, -10, -20, -30, -0.4m };
+            double[] amountsCharged = { 10, 20.5, 30, -10, -20, -30, -0.4 };
 
-            foreach (decimal amount in amountsCharged)
+            foreach (double amount in amountsCharged)
             {
                 await ChargeRequest.Charge(userId, amount);
             }
@@ -144,10 +146,10 @@ namespace WalletServiceTests
         public async Task T8_WalletService_GetBalance_MultipleTransactionsChargedNonSufficientFunds_BalanceIsLastBalanceWithOKChargePerformed()
         {
             await UserHelper.SetUserStatus(userId, true);
-            decimal[] amountsCharged = { 10, 20.5m, 30, -10, -20, -30, -0.4m, -0.8m };
+            double[] amountsCharged = { 10, 20.5, 30, -10, -20, -30, -0.4, -0.8, -9999999.91 };
 
            
-            foreach (decimal amount in amountsCharged)
+            foreach (double amount in amountsCharged)
             {                
                await ChargeRequest.Charge(userId, amount);                              
             }
@@ -164,9 +166,11 @@ namespace WalletServiceTests
         public async Task T9_WalletService_GetBalance_NoTransactionsChargeNegativeBalance_Return200ZeroBalance()
         {
             await UserHelper.SetUserStatus(userId, true);
+            double chargeAmount = -100;
 
-            await ChargeRequest.Charge(userId, -100);                   
-           
+            ChargeResult result = await ChargeRequest.Charge(userId, chargeAmount);
+            Assert.That(result.Response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+
             HttpResponseMessage response = await WalletHelper.GetBalance(userId);
             string responseBody = await response.Content.ReadAsStringAsync();
             string expectedBalance = "0";
@@ -179,9 +183,9 @@ namespace WalletServiceTests
         public async Task T10_WalletService_GetBalance_MultipleTransactionsCharged_OverallBalance9999999_99()
         {
             await UserHelper.SetUserStatus(userId, true);
-            decimal[] amountsCharged = { 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 999999.99m };
+            double[] amountsCharged = { 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 999999.99 };
                        
-            foreach (decimal amount in amountsCharged)
+            foreach (double amount in amountsCharged)
             {
                 await ChargeRequest.Charge(userId, amount);                
             }
@@ -198,9 +202,9 @@ namespace WalletServiceTests
         public async Task T11_WalletService_GetBalance_MultipleTransactionsCharged_OverallBalance10000000()
         {
             await UserHelper.SetUserStatus(userId, true);
-            decimal[] amountsCharged = { 1000000, -1000000, 10000000 };
+            double[] amountsCharged = { 1000000, -1000000, 10000000 };
 
-            foreach (decimal amount in amountsCharged)
+            foreach (double amount in amountsCharged)
             {
                 await ChargeRequest.Charge(userId, amount);
             }
@@ -211,6 +215,68 @@ namespace WalletServiceTests
 
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(responseBody, Is.EqualTo(expectedBalance));
+        }
+        [Test]
+
+        public async Task T12_WalletService_GetBalance_MultipleTransactionsStatusToInactive_ReturnsCorrectBalance()
+        {
+            await UserHelper.SetUserStatus(userId, true);
+            double[] amountsCharged = { 10, 20.5, 30, -15 };
+
+            foreach (double amount in amountsCharged)
+            {
+                await ChargeRequest.Charge(userId, amount);
+            }
+
+            HttpResponseMessage response = await WalletHelper.GetBalance(userId);
+            string responseBody = await response.Content.ReadAsStringAsync();
+            string expectedBalance = "45.5";
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseBody, Is.EqualTo(expectedBalance));
+
+            await UserHelper.SetUserStatus(userId, false);
+            bool statusAfterFalse = await UserHelper.GetUserStatus(userId);
+            Assert.IsFalse(statusAfterFalse);
+
+            await WalletHelper.GetBalance(userId);
+            responseBody = await response.Content.ReadAsStringAsync();
+            expectedBalance = "45.5";
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseBody, Is.EqualTo(expectedBalance));
+        }
+        [Test]
+        public async Task T13_WalletService_Charge_PositiveBalanceAndPositiveCharge_ReturnsTransactionIdCode200()
+        {            
+            await UserHelper.SetUserStatus(userId, true);
+            await ChargeRequest.Charge(userId, 10);
+
+            double chargeAmount = 5;
+
+            ChargeResult result = await ChargeRequest.Charge(userId, chargeAmount);
+
+            Assert.That(result.Response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(result.TransactionId, Is.Not.EqualTo(Guid.Empty));
+        }
+        [Test]
+        public async Task T14_WalletService_Charge_ZeroBalanceAndNegativeCharge_ReturnsTransactionIdEmptyCode500AndBodyMessage()
+        {
+            await UserHelper.SetUserStatus(userId, true);
+            HttpResponseMessage balanceResponse = await WalletHelper.GetBalance(userId);
+            string balanceResponseBody = await balanceResponse.Content.ReadAsStringAsync();
+            decimal currentBalance = decimal.Parse(balanceResponseBody);
+
+            double chargeAmount = -5.0;
+
+            ChargeResult result = await ChargeRequest.Charge(userId, chargeAmount);
+
+            Assert.That(result.Response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+            Assert.That(result.TransactionId, Is.EqualTo(Guid.Empty));
+
+            string expectedMessage = ChargeRequest.FormatChargeMessage(currentBalance, chargeAmount);
+            Assert.That(result.Message, Is.EqualTo(expectedMessage));
+
         }
     }
 }

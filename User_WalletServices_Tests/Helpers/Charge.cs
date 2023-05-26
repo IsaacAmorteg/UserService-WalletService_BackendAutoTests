@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -8,9 +9,17 @@ using UserServiceTests.Models;
 
 namespace UserServiceTests.Helpers
 {
+    public class ChargeResult
+    {
+        public Guid TransactionId { get; set; }
+        public HttpResponseMessage Response { get; set; }
+        public string Message { get; set; }
+    }
+
     public static class ChargeRequest
     {
-        public static async Task<object> Charge(int userId, decimal amount)
+        
+        public static async Task<ChargeResult> Charge(int userId, double amount)
         {
             WalletServiceChargeRequest requestBody = new WalletServiceChargeRequest()
             {
@@ -36,18 +45,32 @@ namespace UserServiceTests.Helpers
                 {
                     string responseContent = await response.Content.ReadAsStringAsync();
                     Guid transactionId = JsonConvert.DeserializeObject<Guid>(responseContent);
-                    return transactionId;
+                    return new ChargeResult
+                    {
+                        TransactionId = transactionId,
+                        Response = response
+                    };
                 }
                 else if (response.StatusCode == HttpStatusCode.InternalServerError)
                 {
                     string responseContent = await response.Content.ReadAsStringAsync();
-                    return responseContent;
+                    return new ChargeResult
+                    {
+                        TransactionId = Guid.Empty,
+                        Response = response,
+                        Message = responseContent
+                    };
                 }
                 else
                 {
                     throw new Exception($"Unexpected status code received: {response.StatusCode}");
                 }
             }
+        }
+        public static string FormatChargeMessage(decimal currentBalance, double chargeAmount)
+        {
+            CultureInfo culture = CultureInfo.InvariantCulture;
+            return $"User have '{currentBalance.ToString(culture)}', you try to charge '{chargeAmount.ToString("0.0", culture)}'.";
         }
     }
 }
