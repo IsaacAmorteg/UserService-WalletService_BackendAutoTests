@@ -399,7 +399,39 @@ namespace WalletServiceTests
             Assert.That(resultAfterSecondCharge.Message, Is.EqualTo($"User have '{balanceResponseBody}', you try to charge '{chargeAmount.ToString("0.00", culture)}'."));
         }
 
-    
-    
+        [Test]
+        [TestCase(10000000.01)]
+        [TestCase(999999999.35)]
+
+        public async Task T22_WalletService_Charge_ZeroBalancePositiveCharge_ReturnsTransactionIDStatusCode200(double chargeAmount)
+        {
+            await UserHelper.SetUserStatus(userId, true);
+            ChargeResult result = await ChargeRequest.Charge(userId, chargeAmount);
+
+            Assert.That(result.Response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+            Assert.That(result.TransactionId, Is.EqualTo(Guid.Empty));
+
+            CultureInfo culture = CultureInfo.InvariantCulture;           
+            Assert.That(result.Message, Is.EqualTo($"After this charge balance could be '{chargeAmount.ToString("0.00", culture)}', maximum user balance is '10000000'"));
+        }
+
+        [Test]
+        [TestCase(0.001)]
+        [TestCase(210.011)]
+        public async Task T23_WalletService_Charge_ZeroBalancePositiveCharge_ReturnsTransactionIDStatusCode200(double chargeAmount)
+        {
+            await UserHelper.SetUserStatus(userId, true);
+            ChargeResult result = await ChargeRequest.Charge(userId, chargeAmount);
+
+            HttpResponseMessage balanceResponse = await WalletHelper.GetBalance(userId);
+            string balanceResponseBody = await balanceResponse.Content.ReadAsStringAsync();
+
+            Assert.That(result.Response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+            Assert.That(result.TransactionId, Is.EqualTo(Guid.Empty));
+
+            Assert.That(result.Message, Is.EqualTo("Amount value must have precision 2 numbers after dot"));
+            
+        }
+
     }
 }
