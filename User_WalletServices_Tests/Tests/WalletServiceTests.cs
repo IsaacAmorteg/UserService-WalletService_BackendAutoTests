@@ -322,12 +322,13 @@ namespace WalletServiceTests
 
             Assert.That(result.Response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(result.TransactionId, Is.Not.EqualTo(Guid.Empty));
+
         }
+
         [Test]
         [TestCase(5)]
         [TestCase(0.01)]
-        //[TestCase(10000000.01)] Create a Negative test for this one
-        //[TestCase(0.001)] Create a Negative test for this one
+        
         public async Task T17_WalletService_Charge_ZeroBalancePositiveCharge_ReturnsTransactionIDStatusCode200(double chargeAmount)
         {
             await UserHelper.SetUserStatus(userId, true);
@@ -378,11 +379,12 @@ namespace WalletServiceTests
             Assert.That(resultAfterSecondCharge.TransactionId, Is.EqualTo(Guid.Empty));
 
         }
-        [Test]        
-        public async Task T21_WalletService_Charge_PositiveBalanceExceedBalanceCharge_ReturnsTransactionIdEmptyCode500AndBodyMessage()
+        [Test]
+        [TestCase(100, -100.01)]
+        [TestCase(2341.10, -5000.51)]
+        public async Task T21_WalletService_Charge_PositiveBalanceExceedBalanceCharge_ReturnsTransactionIdEmptyCode500AndBodyMessage(double initialBalance, double chargeAmount)
         {
-            double initialBalance = 100;
-            double chargeAmount = -100.01;
+            
             await UserHelper.SetUserStatus(userId, true);
             ChargeResult result = await ChargeRequest.Charge(userId, initialBalance);
             Assert.That(result.Response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -403,7 +405,7 @@ namespace WalletServiceTests
         [TestCase(10000000.01)]
         [TestCase(999999999.35)]
 
-        public async Task T22_WalletService_Charge_ZeroBalancePositiveCharge_ReturnsTransactionIDStatusCode200(double chargeAmount)
+        public async Task T22_WalletService_Charge_ZeroBalancePositiveCharge_ReturnsTransactionIdEmptyCode500AndBodyMessage(double chargeAmount)
         {
             await UserHelper.SetUserStatus(userId, true);
             ChargeResult result = await ChargeRequest.Charge(userId, chargeAmount);
@@ -418,7 +420,7 @@ namespace WalletServiceTests
         [Test]
         [TestCase(0.001)]
         [TestCase(210.011)]
-        public async Task T23_WalletService_Charge_ZeroBalancePositiveCharge_ReturnsTransactionIDStatusCode200(double chargeAmount)
+        public async Task T23_WalletService_Charge_TwoDigitsAfterDecimal_ReturnsTransactionIdEmptyCode500AndBodyMessage(double chargeAmount)
         {
             await UserHelper.SetUserStatus(userId, true);
             ChargeResult result = await ChargeRequest.Charge(userId, chargeAmount);
@@ -431,6 +433,21 @@ namespace WalletServiceTests
 
             Assert.That(result.Message, Is.EqualTo("Amount value must have precision 2 numbers after dot"));
             
+        }
+        [Test]
+        public async Task T24_WalletService_Charge_TwoDigitsAfterDecimal_ReturnsTransactionIdEmptyCode500AndBodyMessage()
+        {
+            double chargeAmount = 0;
+            await UserHelper.SetUserStatus(userId, true);
+            ChargeResult result = await ChargeRequest.Charge(userId, chargeAmount);
+
+            HttpResponseMessage balanceResponse = await WalletHelper.GetBalance(userId);
+            string balanceResponseBody = await balanceResponse.Content.ReadAsStringAsync();
+
+            Assert.That(result.Response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+            Assert.That(result.TransactionId, Is.EqualTo(Guid.Empty));
+
+            Assert.That(result.Message, Is.EqualTo("Amount cannot be '0'"));
         }
 
     }
