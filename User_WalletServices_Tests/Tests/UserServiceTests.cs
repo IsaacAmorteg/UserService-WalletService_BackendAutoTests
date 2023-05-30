@@ -1,27 +1,66 @@
 using Newtonsoft.Json;
 using NUnit.Framework;
+using System.Collections.Concurrent;
 using System.Net;
 using UserServiceTests.Helpers;
 
 namespace UserServiceTests
 {
+    [SetUpFixture]
+    public class TestFixtureSetup
+    {
+        private static ConcurrentBag<int> createdUsers;
+
+        [OneTimeSetUp]
+        public void GlobalSetup()
+        {
+            createdUsers = new ConcurrentBag<int>();
+        }
+
+        [OneTimeTearDown]
+        public void GlobalTeardown()
+        {
+            Parallel.ForEach(createdUsers, async (userId) =>
+            {
+                await UserHelper.DeleteUserAsync(userId);
+            });
+        }
+
+        public static void AddCreatedUser(int userId)
+        {
+            createdUsers.Add(userId);
+        }
+
+        public static void RemoveDeletedUser(int userId)
+        {
+            createdUsers.TryTake(out userId);
+        }
+    }
+
     [TestFixture]
     public class UserServiceTests
     {
         private HttpClient client;
         private int userId;
+
         [SetUp]
         public async Task SetupAsync()
         {
             client = new HttpClient();
             UserHelper.SetHttpClient(client);
             userId = await UserHelper.CreateUser("Michael", "Scott");
+                       
+            TestFixtureSetup.AddCreatedUser(userId);
         }
+
         [TearDown]
-        public void TearDown()
-        {
+        public async Task TearDownAsync()
+        {            
+            TestFixtureSetup.RemoveDeletedUser(userId);
+
             client.Dispose();
         }
+
 
         [Test]
         public async Task T1_UserService_RegisterUser_WithEmptyFields_StatusCodeIs200AndIdMoreThan0()
