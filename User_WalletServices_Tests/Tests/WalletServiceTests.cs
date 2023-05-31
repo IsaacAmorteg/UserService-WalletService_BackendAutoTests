@@ -53,8 +53,7 @@ namespace WalletServiceTests
 
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(responseBody, Is.EqualTo("0"));
-        }
-        [Test]
+        }        
         [TestCase(10, "10.0")]
         [TestCase(0.01, "0.01")]
         [TestCase(9999999.99, "9999999.99")]
@@ -69,8 +68,7 @@ namespace WalletServiceTests
 
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
             Assert.That(responseBody, Is.EqualTo(expectedBalance));
-        }
-        [Test]
+        }        
         [TestCase(-10, "0")]
         [TestCase(-0.01, "0")]
         [TestCase(-9999999.99, "0")]
@@ -88,7 +86,6 @@ namespace WalletServiceTests
             Assert.That(responseBody, Is.EqualTo(expectedBalance));
         }
         [Test]
-
         public async Task T5_WalletService_GetBalance_MultipleTransactionsCharged_ReturnsCorrectBalance()
         {
             await UserHelper.SetUserStatus(userId, true);
@@ -247,7 +244,6 @@ namespace WalletServiceTests
             Assert.That(responseBody, Is.EqualTo(expectedBalance));
         }
 
-        [Test]
         [TestCase(10, 5)]
         [TestCase(10000.01, 526.2)]
         [TestCase(23450.65, 5)]
@@ -263,7 +259,6 @@ namespace WalletServiceTests
             Assert.That(result.TransactionId, Is.Not.EqualTo(Guid.Empty));
         }
 
-        [Test]
         [TestCase(-10)]
         [TestCase(-1000)]
         public async Task T14_WalletService_Charge_ZeroBalanceAndNegativeCharge_ReturnsTransactionIdEmptyCode500AndBodyMessage(double chargeAmount)
@@ -283,7 +278,6 @@ namespace WalletServiceTests
 
         }
 
-        [Test]
         [TestCase(-10, -5)]
         [TestCase(-1000, -300.30)]
         [TestCase(-0.5, -0.1)]
@@ -307,7 +301,6 @@ namespace WalletServiceTests
             Assert.That(result.Message, Is.EqualTo(expectedMessage));
         }
 
-        [Test]
         [TestCase(10, -5)]
         [TestCase(1000, -300.30)]
         [TestCase(1000, -0.01)]
@@ -325,7 +318,6 @@ namespace WalletServiceTests
 
         }
 
-        [Test]
         [TestCase(5)]
         [TestCase(0.01)]
         
@@ -338,7 +330,6 @@ namespace WalletServiceTests
             Assert.That(result.TransactionId, Is.Not.EqualTo(Guid.Empty));
         }
 
-        [Test]
         [TestCase(145)]
         [TestCase(-23.5)]
         public async Task T18_WalletService_Charge_InactiveUserCharge_ReturnsTransactionIdEmptyCode500AndBodyMessage(double chargeAmount)
@@ -352,7 +343,7 @@ namespace WalletServiceTests
             Assert.That(result.TransactionId, Is.EqualTo(Guid.Empty));
             Assert.That(result.Message, Is.EqualTo("not active user"));
         }
-        [Test]
+
         [TestCase(145)]
         [TestCase(-23.5)]
         public async Task T19_WalletService_Charge_NonExistingUser_ReturnsTransactionIdEmptyCode500AndBodyMessage(double chargeAmount)
@@ -364,7 +355,7 @@ namespace WalletServiceTests
             Assert.That(result.TransactionId, Is.EqualTo(Guid.Empty));
             Assert.That(result.Message, Is.EqualTo("not active user"));
         }
-        [Test]
+
         [TestCase(10)]
         [TestCase(3410)]
         [TestCase(11030.2)]
@@ -379,7 +370,7 @@ namespace WalletServiceTests
             Assert.That(resultAfterSecondCharge.TransactionId, Is.EqualTo(Guid.Empty));
 
         }
-        [Test]
+
         [TestCase(100, -100.01)]
         [TestCase(2341.10, -5000.51)]
         public async Task T21_WalletService_Charge_PositiveBalanceExceedBalanceCharge_ReturnsTransactionIdEmptyCode500AndBodyMessage(double initialBalance, double chargeAmount)
@@ -401,7 +392,6 @@ namespace WalletServiceTests
             Assert.That(resultAfterSecondCharge.Message, Is.EqualTo($"User have '{balanceResponseBody}', you try to charge '{chargeAmount.ToString("0.00", culture)}'."));
         }
 
-        [Test]
         [TestCase(10000000.01)]
         [TestCase(999999999.35)]
 
@@ -417,7 +407,6 @@ namespace WalletServiceTests
             Assert.That(result.Message, Is.EqualTo($"After this charge balance could be '{chargeAmount.ToString("0.00", culture)}', maximum user balance is '10000000'"));
         }
 
-        [Test]
         [TestCase(0.001)]
         [TestCase(210.011)]
         public async Task T23_WalletService_Charge_TwoDigitsAfterDecimal_ReturnsTransactionIdEmptyCode500AndBodyMessage(double chargeAmount)
